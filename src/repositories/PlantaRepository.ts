@@ -53,3 +53,10 @@ export const diminuirEstoque = async (id: number, quantidade: number) => {
 
   return resultado.count > 0;
 };
+
+//busca so o preço e o estoque de cada planta, pra calcular o valor total
+export const findPrecosEEstoques = async () => {
+  return await prisma.planta.findMany({
+    select: { preco: true, estoque: true },
+  });
+};
