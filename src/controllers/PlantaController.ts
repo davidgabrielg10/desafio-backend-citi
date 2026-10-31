@@ -16,7 +16,6 @@ const CAMPOS_DA_PLANTA = [
 const MAIOR_INT = 2147483647;
 
 //inteiro, maior ou igual ao mínimo e que cabe no banco.
-
 const ehInteiroValido = (valor: any, minimo: number) =>
   Number.isInteger(valor) && valor >= minimo && valor <= MAIOR_INT;
 
@@ -95,7 +94,7 @@ export const createPlanta = async (req: Request, res: Response) => {
 
 export const readAllPlantas = async (req: Request, res: Response) => {
   try {
-    //ss filtros chegam da URL sempre como texto, ou undefined se nao foram enviados
+    //os filtros chegam da URL sempre como texto ou undefined se nao foram enviados
     const luminosidade = req.query.luminosidade as string | undefined;
     const petFriendly = req.query.petFriendly as string | undefined;
 
@@ -235,7 +234,7 @@ export const venderPlanta = async (req: Request, res: Response) => {
 
     const vendeu = await PlantaRepository.diminuirEstoque(id, quantidade);
 
-    //outra venda pode ter levado os ultimos vasos da busca e a subtraçao
+    //outra venda pode ter levado os ultimos vasos entre a busca e subtraçao
     if (!vendeu) {
       return res.status(400).json({
         message: "Estoque insuficiente: outra venda acabou de levar os últimos vasos.",

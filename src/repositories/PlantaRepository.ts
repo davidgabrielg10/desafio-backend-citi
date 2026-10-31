@@ -12,7 +12,7 @@ type FiltrosPlanta = {
   petFriendly?: boolean;
 };
 
-//no where do Prisma, condicoes com valor undefined são ignoradas: uma so consulta resolve sem filtro
+//no where do Prisma, condicoes com valor undefined são ignoradas: uma so consulta resolve sem filtro com um deles ou com os dois
 export const findAllPlantas = async (filtros: FiltrosPlanta) => {
   return await prisma.planta.findMany({
     where: {
@@ -43,8 +43,8 @@ export const deletePlanta = async (id: number) => {
 };
 
 //diminui o estoque só se ainda houver vasos suficientes
-//conferência e a subtraçao acontecem num unico comando no banco, entao duas vendas ao msm tempo nunca deixam estoque negativo
-//devolve true se vendeu e false se n havia estoque suficiente
+//a conferência e a subtraçao acontecem num unico comando no banco, entao duas vendas ao mesmo tempo nunca deixam estoque negativo
+//devolve true se vendeu e false se nao havia estoque suficiente
 export const diminuirEstoque = async (id: number, quantidade: number) => {
   const resultado = await prisma.planta.updateMany({
     where: { id: id, estoque: { gte: quantidade } },
