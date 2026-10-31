@@ -10,16 +10,28 @@ export const createPlanta = async (data: Prisma.PlantaCreateInput) => {
 type FiltrosPlanta = {
   luminosidade?: Luminosidade;
   petFriendly?: boolean;
+  nome?: string;
 };
 
-//no where do Prisma, condicoes com valor undefined são ignoradas: uma so consulta resolve sem filtro com um deles ou com os dois
-export const findAllPlantas = async (filtros: FiltrosPlanta) => {
+type OrdemPlanta = "id" | "preco" | "nome";
+
+//como o Prisma ordena em cada opção de ?ordem=
+const ORDENACAO: Record<OrdemPlanta, Prisma.PlantaOrderByWithRelationInput> = {
+  id: { id: "asc" },
+  preco: { preco: "asc" },
+  nome: { nome: "asc" },
+};
+
+//No where do Prisma, condições com valor undefined são ignoradas: uma única consulta resolve sem filtro com um deles ou com todos
+export const findAllPlantas = async (filtros: FiltrosPlanta, ordem: OrdemPlanta) => {
   return await prisma.planta.findMany({
     where: {
       luminosidade: filtros.luminosidade,
       petFriendly: filtros.petFriendly,
+      // contains = "contem o texto" / mode insensitive = sem diferenciar maisuculas
+      nome: filtros.nome === undefined ? undefined : { contains: filtros.nome, mode: "insensitive" },
     },
-    orderBy: { id: "asc" },
+    orderBy: ORDENACAO[ordem],
   });
 };
 

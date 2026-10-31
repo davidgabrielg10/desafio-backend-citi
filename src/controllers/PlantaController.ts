@@ -94,9 +94,11 @@ export const createPlanta = async (req: Request, res: Response) => {
 
 export const readAllPlantas = async (req: Request, res: Response) => {
   try {
-    //os filtros chegam da URL sempre como texto ou undefined se nao foram enviados
+    //os filtros chegam da URL sempre como texto ou undefined se não foram enviados
     const luminosidade = req.query.luminosidade as string | undefined;
     const petFriendly = req.query.petFriendly as string | undefined;
+    const nome = req.query.nome as string | undefined;
+    const ordem = req.query.ordem as string | undefined;
 
     if (luminosidade !== undefined && !ehLuminosidadeValida(luminosidade)) {
       return res.status(400).json({
@@ -108,12 +110,25 @@ export const readAllPlantas = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "O filtro petFriendly deve ser true ou false." });
     }
 
-    const plantas = await PlantaRepository.findAllPlantas({
-      //depois da validaçao acima, luminosidade é um dos 3 valores do enum
-      luminosidade: luminosidade as Luminosidade | undefined,
-      //converte "true"/"false" em booleano, sem transformar o filtro não enviado em false
-      petFriendly: petFriendly === undefined ? undefined : petFriendly === "true",
-    });
+    if (nome !== undefined && !ehTextoValido(nome)) {
+      return res.status(400).json({ message: "O filtro nome não pode ser vazio." });
+    }
+
+    if (ordem !== undefined && ordem !== "preco" && ordem !== "nome") {
+      return res.status(400).json({ message: "A ordem deve ser preco ou nome." });
+    }
+
+    const plantas = await PlantaRepository.findAllPlantas(
+      {
+        //depois da validacao luminosidade é um dos 3 valores do enum
+        luminosidade: luminosidade as Luminosidade | undefined,
+        //converte "true"/"false" em booleano sem transformar o filtro nao enviado em false
+        petFriendly: petFriendly === undefined ? undefined : petFriendly === "true",
+        nome: nome,
+      },
+      //sem ?ordem=, a lista sai na ordem de cadastro (pelo id)
+      ordem === undefined ? "id" : ordem,
+    );
 
     return res.status(200).json(plantas);
   } catch (error) {
