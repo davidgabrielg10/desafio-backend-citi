@@ -41,3 +41,15 @@ export const deletePlanta = async (id: number) => {
     where: { id: id },
   });
 };
+
+//diminui o estoque só se ainda houver vasos suficientes
+//conferência e a subtraçao acontecem num unico comando no banco, entao duas vendas ao msm tempo nunca deixam estoque negativo
+//devolve true se vendeu e false se n havia estoque suficiente
+export const diminuirEstoque = async (id: number, quantidade: number) => {
+  const resultado = await prisma.planta.updateMany({
+    where: { id: id, estoque: { gte: quantidade } },
+    data: { estoque: { decrement: quantidade } },
+  });
+
+  return resultado.count > 0;
+};
