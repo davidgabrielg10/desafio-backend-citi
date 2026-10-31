@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Luminosidade, Prisma } from "@prisma/client";
 import prisma from "@database";
 
 export const createPlanta = async (data: Prisma.PlantaCreateInput) => {
@@ -7,8 +7,20 @@ export const createPlanta = async (data: Prisma.PlantaCreateInput) => {
   });
 };
 
-export const findAllPlantas = async () => {
-  return await prisma.planta.findMany();
+type FiltrosPlanta = {
+  luminosidade?: Luminosidade;
+  petFriendly?: boolean;
+};
+
+//no where do Prisma, condicoes com valor undefined são ignoradas: uma so consulta resolve sem filtro
+export const findAllPlantas = async (filtros: FiltrosPlanta) => {
+  return await prisma.planta.findMany({
+    where: {
+      luminosidade: filtros.luminosidade,
+      petFriendly: filtros.petFriendly,
+    },
+    orderBy: { id: "asc" },
+  });
 };
 
 export const findPlantaById = async (id: number) => {

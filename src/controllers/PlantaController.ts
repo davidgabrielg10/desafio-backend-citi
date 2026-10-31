@@ -21,6 +21,7 @@ const ehInteiroValido = (valor: any, minimo: number) =>
   Number.isInteger(valor) && valor >= minimo && valor <= MAIOR_INT;
 
 const ehTextoValido = (valor: any) => typeof valor === "string" && valor.trim() !== "";
+const ehLuminosidadeValida = (valor: any) => Object.values(Luminosidade).includes(valor);
 
 //confere so os campos que vieram no corpo (undefined = nao enviado), entao serve para o cadastro e para a edicao.
 const validarCampos = (dados: any): string | null => {
@@ -42,7 +43,7 @@ const validarCampos = (dados: any): string | null => {
     return "estoque deve ser um número inteiro maior ou igual a zero.";
   }
 
-  if (luminosidade !== undefined && !Object.values(Luminosidade).includes(luminosidade)) {
+  if (luminosidade !== undefined && !ehLuminosidadeValida(luminosidade)) {
     return "luminosidade deve ser SOMBRA, MEIA_SOMBRA ou SOL_PLENO.";
   }
 
@@ -94,7 +95,26 @@ export const createPlanta = async (req: Request, res: Response) => {
 
 export const readAllPlantas = async (req: Request, res: Response) => {
   try {
-    const plantas = await PlantaRepository.findAllPlantas();
+    //ss filtros chegam da URL sempre como texto, ou undefined se nao foram enviados
+    const luminosidade = req.query.luminosidade as string | undefined;
+    const petFriendly = req.query.petFriendly as string | undefined;
+
+    if (luminosidade !== undefined && !ehLuminosidadeValida(luminosidade)) {
+      return res.status(400).json({
+        message: "O filtro luminosidade deve ser SOMBRA, MEIA_SOMBRA ou SOL_PLENO.",
+      });
+    }
+
+    if (petFriendly !== undefined && petFriendly !== "true" && petFriendly !== "false") {
+      return res.status(400).json({ message: "O filtro petFriendly deve ser true ou false." });
+    }
+
+    const plantas = await PlantaRepository.findAllPlantas({
+      //depois da validaçao acima, luminosidade é um dos 3 valores do enum
+      luminosidade: luminosidade as Luminosidade | undefined,
+      //converte "true"/"false" em booleano, sem transformar o filtro não enviado em false
+      petFriendly: petFriendly === undefined ? undefined : petFriendly === "true",
+    });
 
     return res.status(200).json(plantas);
   } catch (error) {
