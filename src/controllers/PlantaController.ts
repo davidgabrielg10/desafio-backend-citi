@@ -22,7 +22,7 @@ const ehInteiroValido = (valor: any, minimo: number) =>
 
 const ehTextoValido = (valor: any) => typeof valor === "string" && valor.trim() !== "";
 
-//confere so os campos que vieram no corpo (undefined = n enviado),entao serve para o cadastro e para a edicaoo.
+//confere so os campos que vieram no corpo (undefined = nao enviado), entao serve para o cadastro e para a edicao.
 const validarCampos = (dados: any): string | null => {
   const { nome, especie, preco, estoque, luminosidade, petFriendly, regaACadaDias } = dados;
 
@@ -146,7 +146,7 @@ export const updatePlanta = async (req: Request, res: Response) => {
 
     const { nome, especie, preco, estoque, luminosidade, petFriendly, regaACadaDias } = req.body;
 
-    //PATCH
+    //PATCH: campos nao enviados (undefined) nao sao alterados
     const plantaAtualizada = await PlantaRepository.updatePlanta(id, {
       nome,
       especie,
