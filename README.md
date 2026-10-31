@@ -1,156 +1,201 @@
-# Treinamento de CRUD — CITi
+# 🌿 Folhagem & Cia — API
 
-API de exemplo com um **CRUD de usuários** para o treinamento de back-end dos aspirantes.
+API da loja de plantas Folhagem & Cia, feita para o desafio de back-end do PS do CITi. Ela substitui a planilha da loja: cadastra as plantas, permite filtrar a lista, registra vendas sem deixar o estoque ficar negativo e calcula o valor total do estoque.
 
-**Stack:** Node.js · Express · TypeScript · Prisma · PostgreSQL · Docker
+**Stack:** Node.js, Express, TypeScript, Prisma, PostgreSQL e Docker.
 
-> **CRUD** = **C**reate, **R**ead, **U**pdate e **D**elete: as quatro operações básicas de qualquer cadastro (criar, listar/buscar, editar e remover).
+O código segue a mesma organização do CRUD de usuários do treinamento (que continua no projeto): `routes.ts` → `PlantaController` (valida e escolhe o status) → `PlantaRepository` (conversa com o banco) → PostgreSQL.
 
-| Arquivo | O que tem |
-|---|---|
-| `README.md` (este) | Como rodar o projeto e como o CRUD de usuários funciona |
-| [`DESAFIO.md`](DESAFIO.md) | O enunciado do desafio Folhagem & Cia: o que construir e entregar |
+## Como rodar
 
----
-
-## ✅ Pré-requisitos
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/): roda a API e o banco em containers. **Deixe ele aberto** sempre que for rodar o projeto.
-- [Node.js 20+](https://nodejs.org): para rodar os comandos `yarn` na sua máquina.
-- Yarn: `npm install -g yarn`
-- Um cliente HTTP para testar as rotas: [Thunder Client](https://www.thunderclient.com/) (extensão do VS Code), Insomnia ou Postman.
-
----
-
-## ⚙️ Como rodar
-
-Com o Docker Desktop aberto, rode na raiz do projeto:
+Você precisa do Docker Desktop (aberto), do Node.js 20+ e do Yarn (`npm install -g yarn`).
 
 ```bash
-# 1. Crie o .env a partir do modelo
-cp .env.example .env        # no PowerShell ou CMD: copy .env.example .env
-
-# 2. Instale as dependências na sua máquina
-#    (sem isso, o yarn migration dá "cross-env não é reconhecido")
+git clone https://github.com/davidgabrielg10/desafio-backend-citi.git
+cd desafio-backend-citi
+cp .env.example .env          # no Windows: copy .env.example .env
 yarn
-
-# 3. Suba a API e o banco
 docker compose up -d --build
-
-# 4. Crie as tabelas no banco a partir das migrations
 yarn migration
 ```
 
-Para conferir, abra `http://localhost:3001` no navegador. Deve aparecer:
+A API fica em `http://localhost:3001` e o banco começa vazio. Para ver os logs da API: `docker compose logs -f server`.
 
-```json
-{ "message": "API do treinamento de CRUD do CITi 🚀" }
-```
+## Modelo de dados
 
-### O `.env`
-
-O `.env` guarda as configurações do projeto e **não vai para o git**. Os valores do `.env.example` já funcionam na sua máquina, então não precisa trocar nada. As únicas variáveis que você pode querer mexer:
-
-| Variável | Quando mexer |
-|---|---|
-| `SERVER_PORT` | A porta 3001 já está em uso |
-| `DATABASE_PORT` | A porta 5432 já está em uso (por exemplo, por um Postgres instalado na máquina) |
-
-> **Por que o host do banco é `treinamento-crud-db` e não `localhost`?** A API roda *dentro* do Docker e enxerga o banco pelo nome do container. Os comandos que rodam na sua máquina (`yarn migration` e `yarn studio`) trocam o host para `localhost` sozinhos.
-
-### Comandos do dia a dia
-
-| Comando | O que faz |
-|---|---|
-| `docker compose up -d` | Sobe a API e o banco |
-| `docker compose logs -f server` | Mostra os logs da API (é aqui que os erros aparecem) |
-| `docker compose down` | Derruba os containers (os dados do banco continuam salvos) |
-| `yarn migration` | Cria uma migration a partir do `schema.prisma` e aplica no banco |
-| `yarn studio` | Abre o Prisma Studio para ver o banco no navegador |
-| `yarn typecheck` | Procura erros de tipo no TypeScript |
-
-A API recarrega sozinha quando você salva um arquivo em `src/`. Só precisa rodar `docker compose up -d --build` de novo se mudar o `package.json` ou o `Dockerfile`.
-
-> Prefere npm? Todos os comandos funcionam com `npm install` e `npm run <comando>`.
-
----
-
-## 📁 Estrutura
-
-```
-prisma/
-  schema.prisma          # Models (tabelas) do banco
-  migrations/            # Histórico de mudanças no banco, gerado pelo yarn migration
-src/
-  server.ts              # Cria o app Express e sobe o servidor
-  routes.ts              # Liga cada rota HTTP a uma função do controller
-  database/index.ts      # Conexão com o banco (Prisma Client)
-  controllers/           # Recebe a requisição, valida e responde
-  repositories/          # Única camada que conversa com o banco
-```
-
-O caminho de uma requisição:
-
-```
-Requisição → routes.ts → Controller → Repository → Banco
-                              ↓
-Resposta  ←───────────────────┘  (status HTTP + JSON)
-```
-
----
-
-## 🔌 CRUD de usuários
-
-| Campo | Tipo | Observação |
+| Campo | Tipo | Regra |
 |---|---|---|
-| `id` | número | Gerado pelo banco (1, 2, 3...) |
-| `nome` | texto | Obrigatório |
-| `conta` | `"CPF"` ou `"CNPJ"` | Obrigatório, em maiúsculas |
-| `documento` | texto | Obrigatório e único (não pode repetir) |
-| `createdAt` / `updatedAt` | data | Preenchidos pelo banco |
+| `id` | Int | Gerado pelo banco |
+| `nome` | String | Nome popular, texto não vazio |
+| `especie` | String | Nome científico, texto não vazio |
+| `preco` | Int | Em centavos (`8990` = R$ 89,90), maior que zero |
+| `estoque` | Int | Quantidade de vasos, maior ou igual a zero |
+| `luminosidade` | Luminosidade | `SOMBRA`, `MEIA_SOMBRA` ou `SOL_PLENO` |
+| `petFriendly` | Boolean | `true` ou `false` |
+| `regaACadaDias` | Int | De quantos em quantos dias regar, pelo menos 1 |
+| `createdAt` / `updatedAt` | DateTime | Preenchidos automaticamente |
 
-| Método | Rota | O que faz | Sucesso | Erros |
-|---|---|---|---|---|
-| `POST` | `/users` | Cadastra um usuário | `201` | `400` se faltar campo |
-| `GET` | `/users` | Lista todos os usuários | `200` | |
-| `GET` | `/users/:id` | Busca um usuário pelo id | `200` | `404` se o id não existir |
-| `PATCH` | `/users/:id` | Edita só os campos enviados | `200` | `404` se o id não existir |
-| `DELETE` | `/users/:id` | Remove o usuário | `204` | `404` se o id não existir |
+`Luminosidade` é um enum com três valores: `SOMBRA`, `MEIA_SOMBRA` e `SOL_PLENO`.
 
-Qualquer erro inesperado responde `500`.
+## Rotas
 
-Exemplo de corpo para `POST /users`:
+| Método | Rota | O que faz | Sucesso |
+|---|---|---|---|
+| `POST` | `/plantas` | Cadastra uma planta | `201` |
+| `GET` | `/plantas` | Lista as plantas (com filtros opcionais) | `200` |
+| `GET` | `/plantas/esgotadas` | Lista as plantas com estoque zero | `200` |
+| `GET` | `/plantas/:id` | Busca uma planta | `200` |
+| `PATCH` | `/plantas/:id` | Edita só os campos enviados | `200` |
+| `DELETE` | `/plantas/:id` | Remove uma planta | `204` |
+| `POST` | `/plantas/:id/venda` | Registra uma venda e diminui o estoque | `200` |
+| `GET` | `/plantas/estoque/valor-total` | Valor total do estoque e total de vasos | `200` |
+
+### Cadastrar: `POST /plantas`
+
+Todos os campos são obrigatórios.
 
 ```json
 {
-  "nome": "Maria Silva",
-  "conta": "CPF",
-  "documento": "12345678900"
+  "nome": "Costela-de-adão",
+  "especie": "Monstera deliciosa",
+  "preco": 8990,
+  "estoque": 12,
+  "luminosidade": "MEIA_SOMBRA",
+  "petFriendly": false,
+  "regaACadaDias": 3
 }
 ```
 
-Para o `PATCH`, envie só o que vai mudar: `{ "nome": "Maria S. Silva" }`.
+Resposta `201`:
 
-### Testando no Thunder Client
+```json
+{
+  "id": 1,
+  "nome": "Costela-de-adão",
+  "especie": "Monstera deliciosa",
+  "preco": 8990,
+  "estoque": 12,
+  "luminosidade": "MEIA_SOMBRA",
+  "petFriendly": false,
+  "regaACadaDias": 3,
+  "createdAt": "2026-10-31T13:53:02.000Z",
+  "updatedAt": "2026-10-31T13:53:02.000Z"
+}
+```
 
-1. Crie uma requisição, escolha o método (`POST`, `GET`...) e use a URL `http://localhost:3001/users`.
-2. Para `POST` e `PATCH`, vá em **Body → JSON** e cole o JSON **puro**, sem aspas em volta e sem `\"`.
-3. Para as rotas com `:id`, troque pelo número do usuário: `http://localhost:3001/users/1`.
+Erros: `400` se faltar algum campo (a mensagem diz quais faltaram) ou se algum valor não seguir as regras do modelo, como `"preco": 0` ou `"luminosidade": "LUA"`.
 
----
+### Listar: `GET /plantas`
 
-## 🆘 Problemas comuns
+Os filtros são opcionais e podem ser combinados:
 
-| Erro | O que fazer |
+- `?luminosidade=MEIA_SOMBRA`
+- `?petFriendly=true`
+- `?nome=costela` (bônus): busca pelo nome, sem diferenciar maiúsculas
+- `?ordem=preco` ou `?ordem=nome` (bônus): sem esse parâmetro, a lista sai na ordem de cadastro
+
+Exemplo: `GET /plantas?luminosidade=MEIA_SOMBRA&petFriendly=false`
+
+Resposta `200`: a lista das plantas que combinam com os filtros, no mesmo formato do cadastro. Se nenhuma combinar, vem `[]`.
+
+Erros: `400` se algum filtro tiver um valor inválido, como `?luminosidade=LUA`, `?petFriendly=sim` ou `?ordem=estoque`.
+
+### Plantas esgotadas: `GET /plantas/esgotadas` (bônus)
+
+Resposta `200`: a lista das plantas com `estoque` igual a zero.
+
+### Buscar: `GET /plantas/:id`
+
+Exemplo: `GET /plantas/1`
+
+Resposta `200`: a planta, no mesmo formato do cadastro.
+
+Erros: `400` se o id não for um número inteiro positivo (ex.: `/plantas/abc`) e `404` se a planta não existir.
+
+### Editar: `PATCH /plantas/:id`
+
+Só os campos enviados mudam, e eles passam pelas mesmas regras do cadastro.
+
+```json
+{ "preco": 9990 }
+```
+
+Resposta `200`: a planta atualizada, com o preço novo e o resto igual.
+
+Erros: `400` se o id ou algum valor enviado for inválido e `404` se a planta não existir.
+
+### Remover: `DELETE /plantas/:id`
+
+Resposta `204`, sem corpo.
+
+Erros: `400` se o id for inválido e `404` se a planta não existir (inclusive se ela já foi removida).
+
+### Vender: `POST /plantas/:id/venda`
+
+```json
+{ "quantidade": 2 }
+```
+
+Resposta `200`: a planta com o estoque já atualizado.
+
+```json
+{
+  "id": 1,
+  "nome": "Costela-de-adão",
+  "especie": "Monstera deliciosa",
+  "preco": 9990,
+  "estoque": 10,
+  "luminosidade": "MEIA_SOMBRA",
+  "petFriendly": false,
+  "regaACadaDias": 3,
+  "createdAt": "2026-10-31T13:53:02.000Z",
+  "updatedAt": "2026-10-31T13:53:02.053Z"
+}
+```
+
+Erros:
+
+- `400` se a `quantidade` não for um número inteiro maior que zero;
+- `400` se não houver estoque suficiente, por exemplo `"Estoque insuficiente: temos só 10 vasos de Costela-de-adão."`. Nesse caso, o estoque não muda;
+- `404` se a planta não existir.
+
+### Valor total do estoque: `GET /plantas/estoque/valor-total`
+
+Soma `preco × estoque` de todas as plantas e o total de vasos.
+
+Resposta `200`:
+
+```json
+{ "valorTotalEmCentavos": 99900, "totalDeVasos": 10 }
+```
+
+Com a loja vazia, os dois valores vêm zerados.
+
+## Erros e status HTTP
+
+Os erros respondem em JSON, com uma mensagem explicando o problema:
+
+```json
+{ "message": "estoque deve ser um número inteiro maior ou igual a zero." }
+```
+
+| Status | Quando |
 |---|---|
-| `'cross-env' não é reconhecido como um comando` | Faltou instalar as dependências na sua máquina: rode `yarn`. |
-| `Environment variable not found: DATABASE_URL` | Falta o `.env` na raiz do projeto: `cp .env.example .env`. |
-| `failed to connect to the docker API` | O Docker Desktop está fechado. Abra e espere ele ficar pronto. |
-| `port is already allocated` | Troque `SERVER_PORT` ou `DATABASE_PORT` no `.env` e suba de novo. |
-| `Can't reach database server` | Os containers não estão de pé: `docker compose up -d`. |
-| `Property 'user' does not exist on type 'PrismaClient'` | Rode `yarn migration` e, no VS Code, **Ctrl+Shift+P → Restart TS Server**. |
-| A API não responde em `localhost:3001` | Veja o erro em `docker compose logs -f server`. |
-| `500` ao criar ou editar depois de mudar o `schema.prisma` | O banco ainda está com as colunas antigas: rode `yarn migration`. |
-| `SyntaxError: ... is not valid JSON` ou `req.body` chega `undefined` | O corpo não foi como JSON. Cole o JSON puro em **Body → JSON**. |
+| `400` | Dados inválidos no cadastro, na edição, nos filtros ou na venda; id que não é um número inteiro positivo; estoque insuficiente; corpo com JSON mal formatado |
+| `404` | A planta não existe (ou a rota não existe) |
+| `500` | Erro inesperado no servidor |
 
-> Dica: rode `yarn typecheck` antes de testar. A API não mostra erros de tipo ao rodar, mas o `typecheck` mostra todos de uma vez.
+Os erros específicos de cada rota estão na seção dela, acima.
+
+## Decisões e bônus
+
+**Bônus feitos:** busca por nome, ordenação e a rota de plantas esgotadas. O script de seed não foi feito.
+
+**Duas vendas ao mesmo tempo do último vaso.** Se a venda só conferisse o estoque e depois subtraísse, duas compras simultâneas poderiam passar na conferência e deixar o estoque em `-1`. Por isso, a subtração é feita num único comando no banco, que só diminui o estoque se ele ainda for suficiente (`updateMany` com `estoque >= quantidade`). Se outra venda chegou antes, nada muda e a API responde `400`. Testei com 5 vendas simultâneas de uma planta com 1 vaso: uma foi aceita, quatro foram recusadas e o estoque terminou em 0.
+
+Outras decisões:
+
+- Para saber se um campo foi enviado, comparo com `undefined` em vez de usar `!campo`, para não recusar `estoque: 0` nem `petFriendly: false`.
+- Os números inteiros têm um limite (2.147.483.647, o máximo de uma coluna `Int` no PostgreSQL). Um valor maior responde `400` em vez de causar um erro `500` no banco.
+- A busca por nome ignora maiúsculas, mas não acentos: `?nome=adao` não encontra "Costela-de-adão".
+- Um corpo com JSON mal formatado responde `400` com mensagem em JSON, em vez da página de erro em HTML que o Express mostra por padrão.
